@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Logo Purple (overrides Tailwind indigo) ── */
+  --color-indigo-50: #f5f3ff;
+  --color-indigo-100: #ede9fe;
+  --color-indigo-200: #ddd6fe;
+  --color-indigo-300: #c4b5fd;
+  --color-indigo-400: #a78bfa;
+  --color-indigo-500: #8b5cf6;
+  --color-indigo-600: #7c3aed;
+  /* logo “Skill” purple */
+  --color-indigo-700: #6d28d9;
+  --color-indigo-800: #5b21b6;
+  --color-indigo-900: #4c1d95;
+  --color-indigo-950: #2e1065;
+
+  /* ── Logo Pink (overrides Tailwind rose) ── */
+  --color-rose-50: #fdf2f8;
+  --color-rose-100: #fce7f3;
+  --color-rose-200: #fbcfe8;
+  --color-rose-300: #f9a8d4;
+  --color-rose-400: #f472b6;
+  --color-rose-500: #ec4899;
+  /* logo “Sakhi” pink */
+  --color-rose-600: #db2777;
+  --color-rose-700: #be185d;
+  --color-rose-800: #9d174d;
+  --color-rose-900: #831843;
+  --color-rose-950: #500724;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all;
+  }
+
+  .btn-outline {
+    @apply border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300;
+  }
+
+  .card-premium {
+    @apply bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  .glass {
+    @apply bg-white border-b border-slate-200;
+  }
+}
+
+@layer utilities {
+  .text-indigo-highlight {
+    @apply text-indigo-600;
+  }
+}
+
+/* Become Instructor Banner */
+.become-instructor-banner {
+  @apply flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-100 border border-slate-200 rounded-2xl p-6 mb-6;
+}
+
+.become-instructor-banner h3 {
+  @apply text-lg font-bold text-slate-800 mb-1;
+}
+
+.become-instructor-banner p {
+  @apply text-slate-600 text-sm;
+}

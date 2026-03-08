@@ -1,0 +1,19 @@
+{
+  "name": "skill-sakhi",
+  "version": "1.0.0",
+  "description": "Women Skill Exchange Platform - MERN Stack",
+  "main": "server/server.js",
+  "scripts": {
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-server": "npm install --prefix server",
+    "install-client": "npm install --prefix client",
+    "install-all": "npm install && npm run install-server && npm run install-client",
+    "build": "npm run build --prefix client",
+    "start": "node server/server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

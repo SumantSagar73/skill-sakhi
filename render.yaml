@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: skill-sakhi-api
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        value: mongodb+srv://6073sumant_db_user:TPWzBaNKau1s5M8c@cluster0.2z4tba0.mongodb.net/?appName=Cluster0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false
