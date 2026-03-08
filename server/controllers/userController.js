@@ -67,4 +67,34 @@ const getMembers = async (req, res) => {
     }
 };
 
-module.exports = { getUserProfile, updateProfile, getMembers };
+// @desc    Update user preferences and mark onboarding complete
+// @route   PUT /api/users/preferences
+// @access  Private
+const updatePreferences = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const { categories } = req.body;
+        if (!categories || !Array.isArray(categories)) {
+            return res.status(400).json({ message: 'Categories array is required' });
+        }
+
+        user.preferences = categories;
+        user.onboardingDone = true;
+        const updatedUser = await user.save();
+
+        res.json({
+            _id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            preferences: updatedUser.preferences,
+            onboardingDone: updatedUser.onboardingDone,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { getUserProfile, updateProfile, getMembers, updatePreferences };

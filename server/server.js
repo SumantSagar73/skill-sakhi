@@ -29,6 +29,7 @@ app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.use('/api/communities', require('./routes/communityRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
+app.use('/api/stories', require('./routes/storyRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'Skill Sakhi API is running' }));

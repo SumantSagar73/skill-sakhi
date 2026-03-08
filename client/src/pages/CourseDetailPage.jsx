@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getCourseById, getCourseReviews, createBooking, createReview } from '../services/skillSakhiAPI';
+import { getCourseById, getCourseReviews, createBooking, createReview, checkEnrollment } from '../services/skillSakhiAPI';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
 import { toast } from 'react-toastify';
-import { getYouTubeEmbed, extractYouTubeId, getYouTubeThumbnail } from '../utils/youtube';
-import { HiOutlineClock, HiOutlineChartBar, HiOutlineStar, HiOutlineUser, HiOutlineUserGroup, HiOutlineVideoCamera, HiOutlineCalendarDays, HiOutlineLockClosed, HiOutlinePlayCircle, HiOutlineChevronDown } from 'react-icons/hi2';
+import { HiOutlineClock, HiOutlineChartBar, HiOutlineStar, HiOutlineUser, HiOutlineUserGroup, HiOutlineVideoCamera, HiOutlinePlayCircle, HiOutlineChevronDown, HiOutlinePlay, HiOutlineCheckCircle } from 'react-icons/hi2';
 
 const CourseDetailPage = () => {
     const { id } = useParams();
@@ -14,13 +13,12 @@ const CourseDetailPage = () => {
     const [course, setCourse] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [bookingDate, setBookingDate] = useState('');
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
-    const [booking, setBooking] = useState(false);
+    const [enrolling, setEnrolling] = useState(false);
     const [reviewing, setReviewing] = useState(false);
+    const [isEnrolled, setIsEnrolled] = useState(false);
 
-    // Curriculum player state
-    const [activeTopic, setActiveTopic] = useState(null);  // { moduleIdx, topicIdx }
+    // Curriculum accordion state
     const [openModules, setOpenModules] = useState({});    // { [moduleIdx]: true/false }
 
     useEffect(() => {
@@ -32,14 +30,22 @@ const CourseDetailPage = () => {
                 ]);
                 setCourse(courseRes.data);
                 setReviews(reviewsRes.data);
-                // Auto-open first module and select first free topic
+
+                // Open first module by default
                 if (courseRes.data.modules?.length) {
                     setOpenModules({ 0: true });
-                    const firstFreeTopic = courseRes.data.modules[0]?.topics?.findIndex(t => t.isFree);
-                    if (firstFreeTopic >= 0) {
-                        setActiveTopic({ moduleIdx: 0, topicIdx: firstFreeTopic });
+                }
+
+                // Check environment if logged in
+                if (user) {
+                    try {
+                        const enrollment = await checkEnrollment(id);
+                        setIsEnrolled(enrollment.data.isEnrolled);
+                    } catch (e) {
+                        console.error("Failed to check enrollment", e);
                     }
                 }
+
             } catch {
                 toast.error('Course not found');
                 navigate('/courses');
@@ -50,17 +56,17 @@ const CourseDetailPage = () => {
         fetchData();
     }, [id, navigate]);
 
-    const handleBook = async (e) => {
-        e.preventDefault();
+    const handleEnroll = async () => {
         if (!user) return navigate('/login');
-        setBooking(true);
+        setEnrolling(true);
         try {
-            await createBooking({ courseId: id, date: bookingDate });
-            toast.success('Session booked successfully! 🎉');
+            await createBooking({ courseId: id });
+            setIsEnrolled(true);
+            toast.success('Enrolled successfully! 🎉 Start learning now.');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Booking failed');
+            toast.error(err.response?.data?.message || 'Enrollment failed');
         } finally {
-            setBooking(false);
+            setEnrolling(false);
         }
     };
 
@@ -155,47 +161,6 @@ const CourseDetailPage = () => {
                         {course.modules?.length > 0 && (
                             <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 mb-8">
 
-                                {/* Video Player */}
-                                {activeTopic !== null && (() => {
-                                    const topic = course.modules[activeTopic.moduleIdx]?.topics[activeTopic.topicIdx];
-                                    const embedUrl = topic ? getYouTubeEmbed(topic.videoUrl) : null;
-                                    return (
-                                        <div className="bg-black">
-                                            {embedUrl ? (
-                                                <div className="aspect-video w-full">
-                                                    <iframe
-                                                        className="w-full h-full"
-                                                        src={embedUrl}
-                                                        title={topic.title}
-                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                        allowFullScreen
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="aspect-video w-full flex flex-col items-center justify-center gap-3 text-slate-400">
-                                                    <HiOutlineVideoCamera className="w-16 h-16 opacity-30" />
-                                                    <p className="text-sm font-bold">{topic?.title}</p>
-                                                    <p className="text-xs opacity-60">No video attached to this lesson</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
-
-                                {/* Now Playing label */}
-                                {activeTopic !== null && (
-                                    <div className="px-8 py-4 bg-slate-900 flex items-center gap-3">
-                                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                        <span className="text-white font-bold text-sm">
-                                            Now Playing: {course.modules[activeTopic.moduleIdx]?.topics[activeTopic.topicIdx]?.title}
-                                        </span>
-                                        {course.modules[activeTopic.moduleIdx]?.topics[activeTopic.topicIdx]?.duration && (
-                                            <span className="ml-auto text-slate-400 text-xs font-bold">
-                                                {course.modules[activeTopic.moduleIdx]?.topics[activeTopic.topicIdx]?.duration}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
 
                                 {/* Accordion */}
                                 <div className="p-8">
@@ -227,32 +192,13 @@ const CourseDetailPage = () => {
                                                 {openModules[mi] && (
                                                     <div className="divide-y divide-slate-50">
                                                         {mod.topics.map((topic, ti) => {
-                                                            const isActive = activeTopic?.moduleIdx === mi && activeTopic?.topicIdx === ti;
-                                                            const canPlay = topic.isFree || user;
                                                             return (
-                                                                <button
+                                                                <div
                                                                     key={ti}
-                                                                    className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${isActive
-                                                                        ? 'bg-indigo-50 text-indigo-700'
-                                                                        : canPlay
-                                                                            ? 'hover:bg-slate-50 text-slate-700'
-                                                                            : 'opacity-50 cursor-not-allowed text-slate-400'
-                                                                        }`}
-                                                                    onClick={() => {
-                                                                        if (!canPlay) {
-                                                                            toast.info('Enroll in this course to access all lessons');
-                                                                            return;
-                                                                        }
-                                                                        setActiveTopic({ moduleIdx: mi, topicIdx: ti });
-                                                                        // Scroll to top of player
-                                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                                    }}
+                                                                    className="w-full flex items-center gap-4 px-6 py-4 text-left transition-colors text-slate-700"
                                                                 >
-                                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
-                                                                        }`}>
-                                                                        {canPlay
-                                                                            ? <HiOutlinePlayCircle className="w-4 h-4" />
-                                                                            : <HiOutlineLockClosed className="w-4 h-4" />}
+                                                                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-slate-100 text-slate-500">
+                                                                        <HiOutlinePlayCircle className="w-4 h-4" />
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="text-sm font-bold truncate">{topic.title}</p>
@@ -264,14 +210,11 @@ const CourseDetailPage = () => {
                                                                         {topic.isFree && (
                                                                             <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">FREE</span>
                                                                         )}
-                                                                        {extractYouTubeId(topic.videoUrl) && (
-                                                                            <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1">▶ YT</span>
-                                                                        )}
                                                                         {topic.duration && (
                                                                             <span className="text-xs text-slate-400 font-bold">{topic.duration}</span>
                                                                         )}
                                                                     </div>
-                                                                </button>
+                                                                </div>
                                                             );
                                                         })}
                                                     </div>
@@ -363,24 +306,34 @@ const CourseDetailPage = () => {
 
                                     <div className="h-px bg-slate-100 mb-8"></div>
 
-                                    <form onSubmit={handleBook} className="text-left">
-                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Select Workshop Date</label>
-                                        <div className="relative mb-6">
-                                            <HiOutlineCalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                                            <input
-                                                type="datetime-local"
-                                                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border-none focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-700 text-sm appearance-none"
-                                                value={bookingDate}
-                                                onChange={(e) => setBookingDate(e.target.value)}
-                                                required
-                                                min={new Date().toISOString().slice(0, 16)}
-                                            />
+                                    {isEnrolled ? (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold text-sm py-2">
+                                                <HiOutlineCheckCircle className="w-5 h-5" /> You're enrolled!
+                                            </div>
+                                            <button
+                                                onClick={() => navigate(`/player/${course._id}`)}
+                                                className="btn btn-primary w-full py-5 text-lg rounded-[1.5rem] shadow-indigo-200 flex justify-center items-center gap-2"
+                                            >
+                                                <HiOutlinePlay className="w-5 h-5 fill-current" /> Start Learning
+                                            </button>
                                         </div>
-                                        <button type="submit" className="btn btn-primary w-full py-5 text-lg rounded-[1.5rem] shadow-indigo-200" disabled={booking}>
-                                            {booking ? 'Reserving...' : 'Reserve My Spot'}
-                                        </button>
-                                        <p className="mt-4 text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">Secure checkout & global access</p>
-                                    </form>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={handleEnroll}
+                                                disabled={enrolling}
+                                                className="btn btn-primary w-full py-5 text-lg rounded-[1.5rem] shadow-indigo-200"
+                                            >
+                                                {enrolling ? 'Enrolling...' : course.price === 0 ? 'Enroll for Free' : `Enroll for ₹${course.price}`}
+                                            </button>
+                                            {!user && (
+                                                <p className="text-[11px] text-center text-slate-400 font-bold uppercase tracking-widest">
+                                                    <Link to="/login" className="text-indigo-600 hover:underline">Login</Link> to enroll
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

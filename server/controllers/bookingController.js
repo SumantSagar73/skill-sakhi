@@ -6,7 +6,7 @@ const Course = require('../models/Course');
 // @access  Private
 const createBooking = async (req, res) => {
     try {
-        const { courseId, date, notes } = req.body;
+        const { courseId, notes } = req.body;
 
         const course = await Course.findById(courseId);
         if (!course) return res.status(404).json({ message: 'Course not found' });
@@ -24,11 +24,14 @@ const createBooking = async (req, res) => {
             return res.status(400).json({ message: 'You have already booked this course' });
         }
 
+        // Always confirm immediately — no approval flow needed
+        const bookingStatus = 'confirmed';
+
         const booking = await Booking.create({
             user: req.user._id,
             course: courseId,
             instructor: course.instructor,
-            date,
+            status: bookingStatus,
             notes,
         });
 
@@ -51,7 +54,7 @@ const getMyBookings = async (req, res) => {
         const bookings = await Booking.find({ user: req.user._id })
             .populate('course', 'title thumbnail category')
             .populate('instructor', 'name profilePicture')
-            .sort({ date: -1 });
+            .sort({ createdAt: -1 });
         res.json(bookings);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -66,7 +69,7 @@ const getInstructorBookings = async (req, res) => {
         const bookings = await Booking.find({ instructor: req.user._id })
             .populate('user', 'name email profilePicture')
             .populate('course', 'title')
-            .sort({ date: -1 });
+            .sort({ createdAt: -1 });
         res.json(bookings);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -96,4 +99,23 @@ const updateBookingStatus = async (req, res) => {
     }
 };
 
-module.exports = { createBooking, getMyBookings, getInstructorBookings, updateBookingStatus };
+// @desc    Get all students enrolled in a specific course (instructor only)
+// @route   GET /api/bookings/course/:courseId
+// @access  Private (Instructor)
+const getCourseEnrollments = async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.courseId);
+        if (!course) return res.status(404).json({ message: 'Course not found' });
+        if (course.instructor.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+        const bookings = await Booking.find({ course: req.params.courseId, status: 'confirmed' })
+            .populate('user', 'name email profilePicture')
+            .sort({ createdAt: -1 });
+        res.json(bookings);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { createBooking, getMyBookings, getInstructorBookings, updateBookingStatus, getCourseEnrollments };

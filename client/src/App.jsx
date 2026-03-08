@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CoursesPage from './pages/CoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
+import CoursePlayerPage from './pages/CoursePlayerPage';
 import DashboardPage from './pages/DashboardPage';
 import CommunityPage from './pages/CommunityPage';
 import CommunityDetailPage from './pages/CommunityDetailPage';
@@ -29,6 +30,14 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/courses/:id" element={<CourseDetailPage />} />
+            <Route
+              path="/player/:id"
+              element={
+                <PrivateRoute>
+                  <CoursePlayerPage />
+                </PrivateRoute>
+              }
+            />
             <Route path="/instructors" element={<InstructorsPage />} />
             <Route path="/instructors/:id" element={<InstructorProfilePage />} />
             <Route path="/community" element={<CommunityPage />} />

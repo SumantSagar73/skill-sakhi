@@ -83,7 +83,11 @@ const courseSchema = new mongoose.Schema(
         },
         isApproved: {
             type: Boolean,
-            default: false,
+            default: false, // keep for admin approval
+        },
+        isDraft: {
+            type: Boolean,
+            default: true,
         },
         isActive: {
             type: Boolean,

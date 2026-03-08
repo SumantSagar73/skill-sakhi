@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getCourses } from '../services/skillSakhiAPI';
+import { getCourses, getRecommendedCourses } from '../services/skillSakhiAPI';
+import { useAuth } from '../context/AuthContext';
 import CourseCard from '../components/ui/CourseCard';
 import Spinner from '../components/ui/Spinner';
 import {
@@ -9,6 +10,7 @@ import {
     HiOutlineAdjustmentsHorizontal,
     HiOutlineChevronDown,
     HiOutlineChevronUp,
+    HiOutlineSparkles,
 } from 'react-icons/hi2';
 
 const CATEGORIES = ['Cooking', 'Technology', 'Art & Design', 'Business', 'Fitness', 'Language', 'Handicrafts', 'Digital Marketing', 'Other'];
@@ -42,6 +44,7 @@ const FilterSection = ({ title, children, defaultOpen = true }) => {
 };
 
 const CoursesPage = () => {
+    const { user } = useAuth();
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchInput, setSearchInput] = useState('');
@@ -54,6 +57,7 @@ const CoursesPage = () => {
     const sort = searchParams.get('sort') || '';
     const minRating = searchParams.get('minRating') || '';
     const priceType = searchParams.get('priceType') || ''; // 'free' | 'paid' | ''
+    const forYou = searchParams.get('forYou') === 'true';
 
     useEffect(() => { setSearchInput(keyword); }, [keyword]);
 
@@ -61,19 +65,25 @@ const CoursesPage = () => {
         const fetchCourses = async () => {
             setLoading(true);
             try {
-                const params = {};
-                if (keyword) params.keyword = keyword;
-                if (category) params.category = category;
-                if (level) params.level = level;
-                if (sort) params.sort = sort;
-                if (priceType === 'free') { params.minPrice = 0; params.maxPrice = 0; }
-                if (priceType === 'paid') params.minPrice = 1;
-                const { data } = await getCourses(params);
-                // client-side rating filter
-                const filtered = minRating
-                    ? data.filter(c => (c.rating || 0) >= parseFloat(minRating))
-                    : data;
-                setCourses(filtered);
+                if (forYou && user) {
+                    const { data } = await getRecommendedCourses();
+                    setCourses(data);
+                } else {
+                    const params = {};
+                    if (keyword) params.keyword = keyword;
+                    if (category) params.category = category;
+                    if (level) params.level = level;
+                    if (sort) params.sort = sort;
+                    if (priceType === 'free') { params.minPrice = 0; params.maxPrice = 0; }
+                    if (priceType === 'paid') params.minPrice = 1;
+
+                    const { data } = await getCourses(params);
+                    // client-side rating filter
+                    const filtered = minRating
+                        ? data.filter(c => (c.rating || 0) >= parseFloat(minRating))
+                        : data;
+                    setCourses(filtered);
+                }
             } catch {
                 setCourses([]);
             } finally {
@@ -81,7 +91,7 @@ const CoursesPage = () => {
             }
         };
         fetchCourses();
-    }, [keyword, category, level, sort, minRating, priceType]);
+    }, [keyword, category, level, sort, minRating, priceType, forYou, user]);
 
     const setFilter = (key, value) => {
         const current = Object.fromEntries(searchParams.entries());
@@ -95,9 +105,9 @@ const CoursesPage = () => {
 
     const clearAll = () => setSearchParams({});
 
-    const hasFilters = keyword || category || level || sort || minRating || priceType;
+    const hasFilters = keyword || category || level || sort || minRating || priceType || forYou;
 
-    const activeCount = [keyword, category, level, sort, minRating, priceType].filter(Boolean).length;
+    const activeCount = [keyword, category, level, sort, minRating, priceType, forYou].filter(Boolean).length;
 
     const FilterPanel = () => (
         <div className="space-y-1">
@@ -217,10 +227,21 @@ const CoursesPage = () => {
                         </div>
                         <button
                             onClick={() => setFilter('keyword', searchInput)}
-                            className="btn btn-primary px-6 py-3 rounded-2xl text-sm"
+                            className="btn btn-primary px-6 py-3 rounded-2xl text-sm shrink-0"
                         >
                             Search
                         </button>
+                        {user && user.onboardingDone && (
+                            <button
+                                onClick={() => setFilter('forYou', forYou ? '' : 'true')}
+                                className={`hidden md:flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold border transition-all shrink-0
+                                    ${forYou ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}
+                                `}
+                            >
+                                <HiOutlineSparkles className={forYou ? 'text-pink-500' : 'text-slate-400'} />
+                                For You
+                            </button>
+                        )}
                         {/* Mobile filter toggle */}
                         <button
                             className="md:hidden flex items-center gap-2 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 font-semibold text-sm relative"
@@ -238,8 +259,14 @@ const CoursesPage = () => {
 
                     {/* Active filter chips */}
                     {hasFilters && (
-                        <div className="mt-3 flex flex-wrap gap-2 items-center">
-                            {category && (
+                        <div className="mt-4 flex flex-wrap gap-2 items-center">
+                            {forYou && (
+                                <span className="flex items-center gap-1.5 px-3 py-1 bg-pink-50 text-pink-600 rounded-full text-xs font-bold border border-pink-200">
+                                    <HiOutlineSparkles className="w-3.5 h-3.5" /> For You
+                                    <button onClick={() => setFilter('forYou', '')}><HiOutlineXMark className="w-3.5 h-3.5" /></button>
+                                </span>
+                            )}
+                            {category && !forYou && (
                                 <span className="flex items-center gap-1.5 px-3 py-1 bg-violet-50 text-violet-700 rounded-full text-xs font-bold border border-violet-200">
                                     {category}
                                     <button onClick={() => setFilter('category', '')}><HiOutlineXMark className="w-3.5 h-3.5" /></button>

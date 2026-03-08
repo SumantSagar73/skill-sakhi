@@ -3,7 +3,7 @@
  * Supports: watch?v=, youtu.be/, /embed/
  */
 export const extractYouTubeId = (url = '') => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([^"&?\/\s]{11})/);
     return match ? match[1] : null;
 };
 

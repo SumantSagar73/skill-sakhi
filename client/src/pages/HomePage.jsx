@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getRecommendedCourses } from '../services/skillSakhiAPI';
+import CourseCard from '../components/ui/CourseCard';
 import {
     HiOutlineAcademicCap,
     HiOutlineUserGroup,
@@ -17,6 +20,15 @@ import {
 
 const HomePage = () => {
     const { user } = useAuth();
+    const [recommended, setRecommended] = useState([]);
+
+    useEffect(() => {
+        if (user && user.onboardingDone) {
+            getRecommendedCourses()
+                .then(res => setRecommended(res.data))
+                .catch(err => console.error(err));
+        }
+    }, [user]);
 
     const categories = [
         { icon: HiOutlineCake, name: 'Cooking', color: 'bg-orange-100 text-orange-600' },
@@ -112,6 +124,26 @@ const HomePage = () => {
                     ))}
                 </div>
             </section>
+
+            {/* Recommended Section (Personalized) */}
+            {user && recommended.length > 0 && (
+                <section className="py-16 px-4 md:px-8 max-w-7xl mx-auto border-t border-slate-100">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4 text-center md:text-left">
+                        <div>
+                            <span className="text-pink-600 font-bold text-sm tracking-wider uppercase mb-2 block flex items-center gap-2 justify-center md:justify-start">
+                                <HiOutlineSparkles className="w-4 h-4" /> Just For You
+                            </span>
+                            <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Recommended Courses</h2>
+                            <p className="text-slate-500 font-medium">Curated based on your interests.</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        {recommended.slice(0, 3).map(course => (
+                            <CourseCard key={course._id} course={course} />
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* Why Skill Sakhi Section */}
             <section className="bg-slate-900 py-24 px-4 md:px-8 overflow-hidden relative">

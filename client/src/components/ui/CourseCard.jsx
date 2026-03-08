@@ -15,10 +15,15 @@ const CourseCard = ({ course }) => (
                     <HiOutlineBookOpen className="text-slate-400" />
                 </div>
             )}
-            <div className="absolute top-4 left-4">
-                <span className="px-3 py-1 bg-white text-indigo-600 border border-slate-200 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
+            <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <span className="px-3 py-1 bg-white text-indigo-600 border border-slate-200 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm w-fit">
                     {course.category}
                 </span>
+                {course.isDraft && (
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm w-fit">
+                        Draft
+                    </span>
+                )}
             </div>
         </div>
 

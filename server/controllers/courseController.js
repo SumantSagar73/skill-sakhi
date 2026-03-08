@@ -22,7 +22,7 @@ const autoThumbnail = (modules = []) => {
 // @access  Private (Instructor)
 const createCourse = async (req, res) => {
     try {
-        let { title, description, category, price, duration, level, availableSlots, tags, meetingLink, thumbnail, modules } = req.body;
+        let { title, description, category, price, duration, level, availableSlots, tags, meetingLink, thumbnail, modules, isDraft } = req.body;
 
         // modules may arrive as JSON string when sent via FormData
         if (typeof modules === 'string') {
@@ -48,6 +48,7 @@ const createCourse = async (req, res) => {
             modules: modules || [],
             instructor: req.user._id,
             isApproved: true, // auto-approve until admin panel is built
+            isDraft: isDraft === true || isDraft === 'true' ? true : false,
         });
 
         res.status(201).json(course);
@@ -62,7 +63,7 @@ const createCourse = async (req, res) => {
 const getCourses = async (req, res) => {
     try {
         const { keyword, category, level, minPrice, maxPrice, sort } = req.query;
-        const query = { isApproved: true, isActive: true };
+        const query = { isActive: true, isDraft: { $ne: true } };
 
         if (keyword) {
             query.$or = [
@@ -167,6 +168,30 @@ const getCoursesByInstructor = async (req, res) => {
     }
 };
 
+// @desc    Get recommended courses based on user preferences
+// @route   GET /api/courses/recommended
+// @access  Private
+const getRecommendedCourses = async (req, res) => {
+    try {
+        if (!req.user.preferences || req.user.preferences.length === 0) {
+            return res.json([]);
+        }
+
+        const courses = await Course.find({
+            isActive: true,
+            isDraft: { $ne: true },
+            category: { $in: req.user.preferences }
+        })
+            .populate('instructor', 'name profilePicture rating')
+            .sort({ rating: -1, createdAt: -1 })
+            .limit(10);
+
+        res.json(courses);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Replace course curriculum (modules + topics)
 // @route   PUT /api/courses/:id/curriculum
 // @access  Private (Instructor - owner)
@@ -193,4 +218,22 @@ const updateCurriculum = async (req, res) => {
     }
 };
 
-module.exports = { createCourse, getCourses, getCourseById, updateCourse, deleteCourse, getCoursesByInstructor, updateCurriculum };
+// @desc    Check if current user is enrolled in a course
+// @route   GET /api/courses/:id/enrollment
+// @access  Private
+const checkEnrollment = async (req, res) => {
+    try {
+        const Booking = require('../models/Booking');
+        const booking = await Booking.findOne({
+            course: req.params.id,
+            user: req.user._id,
+            status: 'confirmed'
+        });
+
+        res.json({ isEnrolled: !!booking });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { createCourse, getCourses, getCourseById, updateCourse, deleteCourse, getCoursesByInstructor, updateCurriculum, getRecommendedCourses, checkEnrollment };
